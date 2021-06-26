@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/go-redis/redis/v8"
 	"github.com/max-sanch/ReverseProxy/pkg/handler"
 	"github.com/max-sanch/ReverseProxy/pkg/service"
 	"github.com/spf13/viper"
@@ -10,11 +11,20 @@ import (
 
 func main() {
 	if err := initConfig(); err != nil {
-		log.Fatalf("Error initializing config: %s", err.Error())
+		log.Fatalf("error initializing config: %s", err.Error())
 	}
 
-	services := service.NewService()
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     "rdb:6379",
+		Password: "",
+		DB:       0,
+	})
+
+	defer rdb.Close()
+
+	services := service.NewService(rdb)
 	handlers := handler.NewHandler(services)
+
 	mux := http.NewServeMux()
 	mux.Handle("/", http.HandlerFunc(handlers.WriteResponse))
 

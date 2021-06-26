@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"github.com/max-sanch/ReverseProxy/pkg/service"
 	"github.com/spf13/viper"
-	"io/ioutil"
 	"net/http"
-	"net/url"
 )
 
 type Handler struct {
@@ -19,45 +17,44 @@ func NewHandler(services *service.Service) *Handler {
 
 func (h *Handler) WriteResponse(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Only GET allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "only GET allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	urlStr := fmt.Sprintf("%s%s", viper.GetString("targetHost"), r.URL.Path)
-	req, err := http.NewRequest("GET", urlStr, nil)
+
+	body, err := getBody(w, *h.services, urlStr)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error creating request to %s", urlStr), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	u, err := url.Parse(urlStr)
-	if err != nil {
-		http.Error(w, "Error URL parse", http.StatusInternalServerError)
-		return
-	}
-
-	req.Header.Set("Host", u.Host)
-	req.Header.Set("URL", urlStr)
-
-	client := http.Client{}
-	res, err := client.Do(req)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error sending request to %s", urlStr), http.StatusInternalServerError)
-		return
-	}
-
-	defer res.Body.Close()
-
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		http.Error(w, "Error reading response body", http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(res.StatusCode)
 	_, err = w.Write(body)
 	if err != nil {
-		http.Error(w, "Error write response body", http.StatusInternalServerError)
+		http.Error(w, "error write response body", http.StatusInternalServerError)
 		return
 	}
+}
+
+func getBody(w http.ResponseWriter, services service.Service, urlStr string) ([]byte, error) {
+	isReceived, body := services.GetBodyFromHash(urlStr)
+
+	if !isReceived {
+		res, err := services.GetTargetResponse(urlStr)
+		if err != nil {
+			return nil, err
+		}
+
+		defer res.Body.Close()
+
+		body, err = services.GetTargetResponseBody(res)
+		if err != nil {
+			return nil, err
+		}
+
+		services.SetBodyInHash(urlStr, body)
+		w.WriteHeader(res.StatusCode)
+	}
+
+	return body, nil
 }

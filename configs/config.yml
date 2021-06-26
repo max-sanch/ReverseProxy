@@ -1,2 +1,3 @@
 port: "8080"
-targetHost: "https://habr.com"
+targetHost: "https://habr.com" #https://exemple.com
+hashRecordsLimit: 10

@@ -29,18 +29,14 @@
 
 #### <a name="Linux"></a>На Linux
 
-1) Установите Docker
+1) Установите Docker, docker-compose
 
-2) Установите docker-compose:
+2) При необходимости установите git
 
-       sudo apt install docker-compose
-
-3) При необходимости установите git
-
-4) Скачайте проект с GitHub:
+3) Скачайте проект с GitHub:
 
        sudo git clone https://github.com/max-sanch/ReverseProxy.git
 
-5) Перейдите в деректорию проекта и введите:
+4) Перейдите в деректорию проекта и введите:
 
        sudo docker-compose up --build
